@@ -3,6 +3,8 @@
     [ Need to Make ]
     assertions and boundary checks
 
+    [ Question ]
+    It's a Square, so you can just transpose x, y. but if it is a rectangle, does it still work? if not how to make it work?
 */
 
 #include <cmath>
