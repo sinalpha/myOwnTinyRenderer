@@ -5,6 +5,8 @@
 
     [ Question ]
     It's a Square, so you can just transpose x, y. but if it is a rectangle, does it still work? if not how to make it work?
+
+    is y is less than one associated with y int?
 */
 
 #include <cmath>
@@ -27,13 +29,18 @@ void line(int ax, int ay, int bx, int by, TGAImage& framebuffer, TGAColor color)
         std::swap(ax, bx);
         std::swap(ay, by);
     }
-    float y = ay;
+    int y = ay;
+    float error = 0;
     for (int x = ax; x <= bx; x++) {
         if (steep) // if transposed, de−transpose
             framebuffer.set(y, x, color);
         else
             framebuffer.set(x, y, color);
-        y += (by - ay) / static_cast<float>(bx - ax);
+        error += std::abs(by - ay) / static_cast<float>(bx - ax);
+        if (error > .5) {
+            y += by > ay ? 1 : -1;
+            error -= 1.;
+        }
     }
 }
 
