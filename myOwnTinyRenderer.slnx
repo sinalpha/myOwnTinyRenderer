@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="myOwnTinyRenderer.vcxproj" />
+  <Project Path="myOwnTinyRenderer.vcxproj" Id="d37de3e2-e265-4583-8ce3-209a3f0e5c7b" />
 </Solution>
