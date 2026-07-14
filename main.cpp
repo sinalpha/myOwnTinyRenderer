@@ -37,10 +37,8 @@ void line(int ax, int ay, int bx, int by, TGAImage& framebuffer, TGAColor color)
         else
             framebuffer.set(x, y, color);
         ierror += 2 * std::abs(by - ay);
-        if (ierror > bx - ax) {
-            y += by > ay ? 1 : -1;
-            ierror -= 2 * (bx - ax);
-        }
+        y += (by > ay ? 1 : -1) * (ierror > bx - ax);
+        ierror -= 2 * (bx - ax) * (ierror > bx - ax);
     }
 }
 
