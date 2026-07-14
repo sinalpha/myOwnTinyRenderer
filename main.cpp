@@ -1,8 +1,12 @@
 #include <cmath>
 #include <tuple>
+#include <algorithm>
+#include <array>
+
 #include "geometry.h"
 #include "model.h"
 #include "tgaimage.h"
+
 
 constexpr int width  = 128;
 constexpr int height = 128;
@@ -38,11 +42,63 @@ void line(int ax, int ay, int bx, int by, TGAImage &framebuffer, TGAColor color)
     }
 }
 
+void scanline(int ax, int ay, int bx, int by, int cx, int cy, TGAImage& framebuffer, TGAColor color) {
+
+    //min x point, max x point.
+    //min y point, max y point.
+    struct vec2 {
+        int x;
+        int y;
+    };
+
+    std::array<vec2, 3> pts;
+
+    pts.at(0) = { ax, ay };
+    pts.at(1) = { bx, by };
+    pts.at(2) = { cx, cy };
+
+    std::sort(pts.begin(), pts.end(), [](const vec2& a, const vec2& b) {
+        return a.y < b.y;
+        });
+
+    vec2& minYpt = pts.at(0);
+    vec2& midYpt = pts.at(1);
+    vec2& maxYpt = pts.at(2);
+
+    for (int y = minYpt.y; y <= maxYpt.y; ++y) {
+
+        int startX = minYpt.x;
+        int endX = minYpt.x;
+
+        if (y < midYpt.y) {
+            startX = (midYpt.y == minYpt.y) ? midYpt.x :
+                minYpt.x + (int)((midYpt.x - minYpt.x) * ((float)(y - minYpt.y) / (midYpt.y - minYpt.y)));
+        }
+        else {
+            startX = (maxYpt.y == midYpt.y) ? midYpt.x :
+                midYpt.x + (int)((maxYpt.x - midYpt.x) * ((float)(y - midYpt.y) / (maxYpt.y - midYpt.y)));
+        }
+
+        if (maxYpt.y != minYpt.y) {
+            float t2 = (float)(y - minYpt.y) / (maxYpt.y - minYpt.y);
+            endX = minYpt.x + (int)((maxYpt.x - minYpt.x) * t2);
+        }
+        if (startX > endX) std::swap(startX, endX);
+
+        line(startX, y, endX, y, framebuffer, color);
+
+    }
+
+}
+
 void triangle(int ax, int ay, int bx, int by, int cx, int cy, TGAImage &framebuffer, TGAColor color) {
     line(ax, ay, bx, by, framebuffer, color);
     line(bx, by, cx, cy, framebuffer, color);
     line(cx, cy, ax, ay, framebuffer, color);
+    scanline(ax, ay, bx, by, cx, cy, framebuffer, color);
 }
+
+
 
 int main(int argc, char** argv) {
     TGAImage framebuffer(width, height, TGAImage::RGB);
