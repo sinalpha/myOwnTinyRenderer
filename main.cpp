@@ -45,10 +45,6 @@ void rasterize(const vec4 clip[3], std::vector<double>& zbuffer, TGAImage& frame
 }
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " obj/model.obj" << std::endl;
-        return 1;
-    }
 
     constexpr int width = 800;    // output image size
     constexpr int height = 800;
@@ -63,8 +59,8 @@ int main(int argc, char** argv) {
     TGAImage framebuffer(width, height, TGAImage::RGB);
     std::vector<double> zbuffer(width * height, -std::numeric_limits<double>::max());
 
-    for (int m = 1; m < argc; m++) { // iterate through all input objects
-        Model model(argv[m]);
+    for (int m = 1; m < 2; m++) { // iterate through all input objects
+        Model model("D:/programming/myOwnTinyRenderer/obj/diablo3_pose.obj");
         for (int i = 0; i < model.nfaces(); i++) { // iterate through all triangles
             vec4 clip[3];
             for (int d : {0, 1, 2}) {            // assemble the primitive
