@@ -40,14 +40,15 @@ struct RandomShader : IShader {
 
         const vec3 r = 2 * normal * (normal * light) - light;
         const vec3 v = normalized(-bar.x * tri[0] + -bar.y * tri[1] + -bar.z * tri[2]);
-        const vec3 ambient{ 0.1 };
-        const vec3 diffuse{ std::max(0., normal * light) };
-        const vec3 specular{ std::max(0., r * v)};
+        const double ambient = 0.1;
+        const double diffuse = std::max(0., normal * light);
+        const double specular = std::max(0., r * v);
 
-        vec3 sum = (ambient + diffuse + specular) * 255.f;
+        double intensity = std::min(1., ambient + diffuse + specular);
+        vec3 sum = vec3{ intensity, intensity, intensity } * 255.;
 
-        TGAColor res = TGAColor{ 
-            static_cast<unsigned char>(sum.x), 
+        TGAColor res = TGAColor{
+            static_cast<unsigned char>(sum.x),
             static_cast<unsigned char>(sum.y),
             static_cast<unsigned char>(sum.z),
             255 };
