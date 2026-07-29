@@ -21,14 +21,14 @@ Model::Model(const std::string filename) {
             iss >> trash >> trash;
             vec2 v;
             for (int i : {0, 1}) iss >> v[i];
-            UVs.push_back(v);
+            UVs.push_back({v.x, 1-v.y}); // the obj v axis points up, the image y axis points down
         
         }
         else if (!line.compare(0, 3, "vn ")) {
             iss >> trash >> trash;
             vec3 v;
             for (int i : {0, 1, 2}) iss >> v[i];
-            normals.push_back(v);
+            normals.push_back(normalized(v));
         }
         else if (!line.compare(0, 2, "f ")) {
             int f,t,n, cnt = 0;

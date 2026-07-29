@@ -19,7 +19,7 @@ public:
         return normals[facet_nrml[iface * 3 + nthnrml]];
     }
     vec2 UV(const int iface, const int nthUV) const {
-        return UVs[facet_uv[iface * 2 + nthUV]];
+        return UVs[facet_uv[iface * 3 + nthUV]];
     }
 };
 
