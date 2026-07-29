@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "our_gl.h"
 #include "model.h"
 
@@ -11,7 +12,9 @@ struct PhongShader : IShader {
     vec3 norml_[3];
     vec2 uv_[3];
     TGAImage normalbuffer;
-
+    TGAImage specularbuffer;
+    TGAImage emissivebuffer;
+    TGAImage diffusebuffer;
 
     PhongShader(const vec3 light, const Model &m) : model(m) {
         l = normalized((ModelView*vec4{light.x, light.y, light.z, 0.}).xyz()); // transform the light vector to view coordinates
@@ -29,25 +32,39 @@ struct PhongShader : IShader {
         return Perspective * gl_Position;                         // in clip coordinates
     }
 
+
+
+    // nearest-neighbour texture fetch: each map has its own resolution, and uv==1 must not run off the edge
+    static TGAColor sample(const TGAImage &img, const vec2 uv) {
+        int x = std::min(img.width() -1, std::max(0, int(uv.x * img.width() )));
+        int y = std::min(img.height()-1, std::max(0, int(uv.y * img.height())));
+        return img.get(x, y);
+    }
+
     virtual std::pair<bool,TGAColor> fragment(const vec3 bar) const {
-        TGAColor gl_FragColor = {255, 255, 255, 255};             // output color of the fragment
-        vec3 p = bar[0] * tri[0] + bar[1] * tri[1] + bar[2] * tri[2];
         vec2 U = bar[0] * uv_[0] + bar[1] * uv_[1] + bar[2] *  uv_[2];
-        TGAColor normalColor = normalbuffer.get(U.x * normalbuffer.width(), U.y * normalbuffer.height());
+
+        TGAColor normalColor = sample(normalbuffer, U);
         vec3 n_obj = { 0 };
-        for (int i = 0; i < 3; i++) {
-            n_obj[i] = normalColor[2 - i] / 255.f * 2.f - 1.f;
-        }
+        for (int i = 0; i < 3; i++)
+            n_obj[i] = normalColor[2 - i] / 255. * 2. - 1.;       // bgra -> xyz, [0,255] -> [-1,1]
         vec3 n = normalized((ModelView.invert_transpose() * vec4{n_obj.x, n_obj.y, n_obj.z, 0.}).xyz()); // object space -> eye space
+
         vec3 r = normalized(n * (n * l)*2 - l);                   // reflected light direction
+
+        TGAColor dc = sample(diffusebuffer, U);
+        vec3 albedo = { dc[2]/255., dc[1]/255., dc[0]/255. };     // bgra -> rgb, normalized to [0,1]
+        double gloss = sample(specularbuffer, U)[0];              // the spec map is GRAYSCALE and stores the Phong exponent
+
         double ambient = .3;                                      // ambient light intensity
         double diff = std::max(0., n * l);                        // diffuse light intensity
-        double spec = std::pow(std::max(r.z, 0.), 35);               // specular intensity, note that the camera lies on the z-axis (in eye coordinates), therefore simple r.z, since (0,0,1)*(r.x, r.y, r.z) = r.z
-        
+        double spec = std::pow(std::max(r.z, 0.), std::max(1., gloss)); // specular intensity, note that the camera lies on the z-axis (in eye coordinates), therefore simple r.z, since (0,0,1)*(r.x, r.y, r.z) = r.z
 
-        
-        for (int channel : {0,1,2})
-            gl_FragColor[channel] *= std::min(1., ambient + .4*diff + .9*spec);
+        TGAColor gl_FragColor = {0, 0, 0, 255};                   // output color of the fragment
+        for (int channel : {0, 1, 2}) {                           // everything above lives in [0,1], so clamp before quantizing
+            double v = albedo[channel] * (ambient + diff) + .6 * spec;
+            gl_FragColor[2 - channel] = std::uint8_t(std::min(1., v) * 255.); // rgb -> bgra
+        }
         return {false, gl_FragColor};                             // do not discard the pixel
     }
 };
@@ -72,6 +89,8 @@ int main(int argc, char** argv) {
         Model model("D:/programming/myOwnTinyRenderer/obj/african_head.obj");             // load the data
         PhongShader shader(light, model);
         shader.normalbuffer.read_tga_file("D:/programming/myOwnTinyRenderer/obj/african_head_nm.tga");
+        shader.specularbuffer.read_tga_file("D:/programming/myOwnTinyRenderer/obj/african_head_spec.tga");
+        shader.diffusebuffer.read_tga_file("D:/programming/myOwnTinyRenderer/obj/african_head_diffuse.tga");
         for (int f=0; f<model.nfaces(); f++) {      // iterate through all facets
             Triangle clip = { shader.vertex(f, 0),  // assemble the primitive
                               shader.vertex(f, 1),
