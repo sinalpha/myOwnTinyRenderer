@@ -15,7 +15,7 @@ struct PhongShader : IShader {
     TGAImage specularbuffer;
     TGAImage emissivebuffer;
     TGAImage diffusebuffer;
-
+    TGAImage normal_tanbuffer;
     PhongShader(const vec3 light, const Model &m) : model(m) {
         l = normalized((ModelView*vec4{light.x, light.y, light.z, 0.}).xyz()); // transform the light vector to view coordinates
     }
@@ -44,13 +44,37 @@ struct PhongShader : IShader {
     virtual std::pair<bool,TGAColor> fragment(const vec3 bar) const {
         vec2 U = bar[0] * uv_[0] + bar[1] * uv_[1] + bar[2] *  uv_[2];
 
-        TGAColor normalColor = sample(normalbuffer, U);
-        vec3 n_obj = { 0 };
-        for (int i = 0; i < 3; i++)
-            n_obj[i] = normalColor[2 - i] / 255. * 2. - 1.;       // bgra -> xyz, [0,255] -> [-1,1]
-        vec3 n = normalized((ModelView.invert_transpose() * vec4{n_obj.x, n_obj.y, n_obj.z, 0.}).xyz()); // object space -> eye space
+        vec3 n_obj = normalized(norml_[0] * bar[0] + norml_[1] * bar[1] + norml_[2] * bar[2]);
 
+        vec3 e0 = tri[1] - tri[0];
+        vec3 e1 = tri[2] - tri[0];
+        vec2 u0 = uv_[1] - uv_[0];
+        vec2 u1 = uv_[2] - uv_[0];
+
+        mat<2, 3> emat;
+        emat.rows[0] = e0;
+        emat.rows[1] = e1;
+
+        mat<2, 2> umat;
+        umat.rows[0] = u0;
+        umat.rows[1] = u1;
+
+        mat<2, 3> tb = umat.invert() * emat;
+        mat<3, 3> tbn;
+        tbn[0] = normalized(tb[0]);
+        tbn[1] = normalized(tb[1]);
+        tbn[2] = n_obj;
+
+        TGAColor normaltanColor = sample(normal_tanbuffer, U);
+        vec3 ntan_obj = { 0 };
+        for (int i = 0; i < 3; i++)
+            ntan_obj[i] = normaltanColor[2 - i] / 255. * 2. - 1.;       // bgra -> xyz, [0,255] -> [-1,1]
+
+        vec3 n = normalized(ntan_obj * tbn);
+        
         vec3 r = normalized(n * (n * l)*2 - l);                   // reflected light direction
+
+
 
         TGAColor dc = sample(diffusebuffer, U);
         vec3 albedo = { dc[2]/255., dc[1]/255., dc[0]/255. };     // bgra -> rgb, normalized to [0,1]
@@ -89,6 +113,7 @@ int main(int argc, char** argv) {
         Model model("D:/programming/myOwnTinyRenderer/obj/african_head.obj");             // load the data
         PhongShader shader(light, model);
         shader.normalbuffer.read_tga_file("D:/programming/myOwnTinyRenderer/obj/african_head_nm.tga");
+        shader.normal_tanbuffer.read_tga_file("D:/programming/myOwnTinyRenderer/obj/african_head_nm_tangent.tga");
         shader.specularbuffer.read_tga_file("D:/programming/myOwnTinyRenderer/obj/african_head_spec.tga");
         shader.diffusebuffer.read_tga_file("D:/programming/myOwnTinyRenderer/obj/african_head_diffuse.tga");
         for (int f=0; f<model.nfaces(); f++) {      // iterate through all facets
