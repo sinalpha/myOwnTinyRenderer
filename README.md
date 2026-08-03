@@ -9,5 +9,6 @@ The code of [tinyrenderer](https://haqr.eu/tinyrenderer/) for learning low-level
     <figcaption>Result: The phong shaded image.</figcaption>
     <img src="img/perspective-corrected-and-shadow-mapping.png" width="200px" height="200px">
     <figcaption>Result: perspective-corrected-and-shadow-mapping</figcaption>
-
+    <img src="img/brute-forced-AO.png" width="200px" height="200px">
+    <figcaption>Result: brute-forced-AO</figcaption>
 </figure>

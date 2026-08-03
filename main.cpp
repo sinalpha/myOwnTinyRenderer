@@ -140,8 +140,12 @@ int main(int argc, char** argv) {
             return distribution(generator);
         };
 
+    std::vector<Model> models;
+    for (int m = 1; m < argc; m++) models.emplace_back(argv[m]); // load each object once, reused across all samples
+
     for (int i = 0; i < sample_n; ++i)
     { // shadow rendering pass
+        std::cerr << "sample " << i+1 << "/" << sample_n << std::endl;
         float y = random_float();
         float theta = static_cast<float>(2) * 3.141592 * random_float();
         float r = std::sqrt(static_cast<float>(1) - y * y);
@@ -158,8 +162,7 @@ int main(int argc, char** argv) {
 
 
 
-        for (int m = 1; m < argc; m++) {                    // iterate through all input objects
-            Model model(argv[m]);                       // load the data
+        for (Model &model : models) {                    // iterate through all input objects
             BlankShader shader{ model };
             for (int f = 0; f < model.nfaces(); f++) {      // iterate through all facets
                 Triangle clip = { shader.vertex(f, 0),  // assemble the primitive
@@ -191,6 +194,7 @@ int main(int argc, char** argv) {
         }
 
         TGAImage maskimg(width, height, TGAImage::GRAYSCALE);
+#pragma omp parallel for
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 double ao = mask[x + y * width] / (i + 1); 
@@ -204,9 +208,9 @@ int main(int argc, char** argv) {
 #pragma omp parallel for
     for (int x = 0; x < width; x++) {
         for (int y = 0; y < height; y++) {
-            double m = mask[x + y * width];
+            double ao = mask[x + y * width] / sample_n;   // fraction of samples where the point was lit, in [0,1]
             TGAColor c = framebuffer.get(x, y);
-            framebuffer.set(x, y, { static_cast<unsigned char>(c[0] * m), static_cast<unsigned char>(c[1] * m), static_cast<unsigned char>(c[2] * m), c[3] });
+            framebuffer.set(x, y, { static_cast<unsigned char>(c[0] * ao), static_cast<unsigned char>(c[1] * ao), static_cast<unsigned char>(c[2] * ao), c[3] });
         }
     }
     framebuffer.write_tga_file("shadow.tga");
